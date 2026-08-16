@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Panel Admin - Boda</title>
+    <style>
+      :root {
+        --bg: #f1eee8;
+        --paper: #fffdf8;
+        --ink: #1e1c1a;
+        --muted: #6c645d;
+        --line: #d9d1c8;
+        --accent: #2f5e7b;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Work Sans", "Segoe UI", sans-serif;
+        background: radial-gradient(circle at 80% 0%, #fffdf8, var(--bg));
+        color: var(--ink);
+      }
+      .wrap {
+        width: min(980px, 94vw);
+        margin: 28px auto 44px;
+      }
+      h1, h2 {
+        font-family: "Cormorant Garamond", Georgia, serif;
+        margin: 0;
+      }
+      .top {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 18px;
+      }
+      .card {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        padding: 16px;
+        margin-bottom: 14px;
+      }
+      .grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .metric {
+        border: 1px solid var(--line);
+        background: #fff;
+        padding: 12px;
+      }
+      .metric strong {
+        display: block;
+        font-size: 1.6rem;
+        color: var(--accent);
+      }
+      .muted { color: var(--muted); }
+      input, button {
+        font: inherit;
+      }
+      input {
+        width: min(420px, 100%);
+        border: 1px solid var(--line);
+        padding: 10px;
+        background: #fff;
+      }
+      button, .link-btn {
+        border: 1px solid #222;
+        background: #222;
+        color: #fff;
+        padding: 10px 14px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+      }
+      th, td {
+        text-align: left;
+        border-bottom: 1px solid var(--line);
+        padding: 8px 6px;
+        vertical-align: top;
+      }
+      th { color: var(--muted); font-weight: 600; }
+      @media (max-width: 760px) {
+        .grid { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="top">
+        <div>
+          <h1>Panel de administración</h1>
+          <p class="muted">Resumen de confirmaciones y canciones</p>
+        </div>
+        <div class="actions">
+          <a class="link-btn" href="/">Volver a la invitación</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <label for="admin-token">Token admin (si está activado)</label><br />
+        <input id="admin-token" type="text" placeholder="Escribe el token o deja vacío" />
+        <button id="load-data" type="button">Cargar datos</button>
+        <p id="status" class="muted"></p>
+      </div>
+
+      <div class="card">
+        <h2>Métricas</h2>
+        <div class="grid">
+          <div class="metric"><span>RSVP totales</span><strong id="m-rsvp">0</strong></div>
+          <div class="metric"><span>Asisten</span><strong id="m-yes">0</strong></div>
+          <div class="metric"><span>No asisten</span><strong id="m-no">0</strong></div>
+          <div class="metric"><span>Adultos</span><strong id="m-adults">0</strong></div>
+          <div class="metric"><span>Niños</span><strong id="m-kids">0</strong></div>
+          <div class="metric"><span>Canciones</span><strong id="m-songs">0</strong></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Integración Google</h2>
+        <p><strong id="m-sheets">Comprobando...</strong></p>
+        <p class="muted">Cuando está activa, los envíos del formulario también se escriben en Google Sheets.</p>
+      </div>
+
+      <div class="card">
+        <h2>Exportación</h2>
+        <div class="actions">
+          <button id="export-rsvp" type="button">Descargar RSVP CSV</button>
+          <button id="export-songs" type="button">Descargar canciones CSV</button>
+          <button id="reset-data" type="button">Restablecer respuestas</button>
+        </div>
+        <p class="muted">Este botón limpia las respuestas locales y, si la hoja está configurada, también la restablece.</p>
+      </div>
+
+      <div class="card">
+        <h2>Últimos RSVP</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Asiste</th>
+              <th>Adultos</th>
+              <th>Niños</th>
+              <th>Detalle</th>
+            </tr>
+          </thead>
+          <tbody id="rsvp-body"></tbody>
+        </table>
+      </div>
+
+      <div class="card">
+        <h2>Últimas canciones</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Invitado</th>
+              <th>Canción</th>
+              <th>Artista</th>
+            </tr>
+          </thead>
+          <tbody id="songs-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <script>
+      (function () {
+        var tokenInput = document.getElementById('admin-token');
+        var status = document.getElementById('status');
+
+        function authHeaders() {
+          var token = tokenInput.value.trim();
+          if (!token) return {};
+          return { 'x-admin-token': token };
+        }
+
+        function setStatus(text, isError) {
+          status.textContent = text;
+          status.style.color = isError ? '#8d2d2d' : '#6c645d';
+        }
+
+        function safeText(value) {
+          return String(value == null ? '' : value);
+        }
+
+        function formatDate(value) {
+          if (!value) return '';
+          var date = new Date(value);
+          if (Number.isNaN(date.getTime())) return safeText(value);
+          return date.toLocaleString('es-ES');
+        }
+
+        function rsvpDetail(item) {
+          if (item.assist === 'no') {
+            return 'No asiste: ' + safeText(item.guestName || '');
+          }
+
+          var adults = Array.isArray(item.adults) ? item.adults : [];
+          var names = adults.map(function (p) { return p.name || ''; }).filter(Boolean).join(', ');
+          return names;
+        }
+
+        function renderTableRows(list, tbodyId, cols) {
+          var tbody = document.getElementById(tbodyId);
+          tbody.innerHTML = '';
+          if (!list.length) {
+            tbody.innerHTML = '<tr><td colspan="' + cols.length + '">Sin datos</td></tr>';
+            return;
+          }
+
+          list.forEach(function (item) {
+            var row = document.createElement('tr');
+            cols.forEach(function (getter) {
+              var td = document.createElement('td');
+              td.textContent = getter(item);
+              row.appendChild(td);
+            });
+            tbody.appendChild(row);
+          });
+        }
+
+        function updateMetrics(stats) {
+          document.getElementById('m-rsvp').textContent = safeText(stats.rsvpTotal);
+          document.getElementById('m-yes').textContent = safeText(stats.assistYes);
+          document.getElementById('m-no').textContent = safeText(stats.assistNo);
+          document.getElementById('m-adults').textContent = safeText(stats.adultsTotal);
+          document.getElementById('m-kids').textContent = safeText(stats.kidsTotal);
+          document.getElementById('m-songs').textContent = safeText(stats.songsTotal);
+          document.getElementById('m-sheets').textContent = stats.sheetsConfigured ? 'Conectado a Google Sheets' : 'Google Sheets no configurado';
+        }
+
+        async function loadSummary() {
+          setStatus('Cargando datos...', false);
+          try {
+            var response = await fetch('/api/admin/summary', { headers: authHeaders() });
+            var result = await response.json();
+            if (!response.ok) {
+              throw new Error(result.message || 'No se pudo cargar el resumen.');
+            }
+
+            updateMetrics(result.stats);
+
+            renderTableRows(result.latestRsvp || [], 'rsvp-body', [
+              function (item) { return formatDate(item.submittedAt); },
+              function (item) { return item.assist === 'yes' ? 'Sí' : 'No'; },
+              function (item) { return safeText(item.adultsCount || 0); },
+              function (item) { return safeText(item.kidsCount || 0); },
+              function (item) { return rsvpDetail(item); }
+            ]);
+
+            renderTableRows(result.latestSongs || [], 'songs-body', [
+              function (item) { return formatDate(item.submittedAt); },
+              function (item) { return safeText(item.guestName); },
+              function (item) { return safeText(item.songTitle); },
+              function (item) { return safeText(item.songArtist); }
+            ]);
+
+            setStatus('Resumen actualizado.', false);
+          } catch (error) {
+            setStatus(error.message || 'Error de carga.', true);
+          }
+        }
+
+        function triggerDownload(path) {
+          var token = tokenInput.value.trim();
+          var url = token ? path + '?token=' + encodeURIComponent(token) : path;
+          window.open(url, '_blank');
+        }
+
+        async function resetData() {
+          var confirmed = window.confirm('Esto eliminará todas las respuestas y reiniciará la hoja de cálculo si está configurada. ¿Continuar?');
+          if (!confirmed) {
+            setStatus('Restablecimiento cancelado.', false);
+            return;
+          }
+
+          setStatus('Restableciendo datos...', false);
+
+          try {
+            var response = await fetch('/api/admin/reset-data', {
+              method: 'POST',
+              headers: authHeaders()
+            });
+            var result = await response.json();
+
+            if (!response.ok) {
+              throw new Error(result.message || 'No se pudo restablecer la información.');
+            }
+
+            setStatus(result.message || 'Datos restablecidos.', false);
+            await loadSummary();
+          } catch (error) {
+            setStatus(error.message || 'Error al restablecer.', true);
+          }
+        }
+
+        document.getElementById('load-data').addEventListener('click', loadSummary);
+        document.getElementById('export-rsvp').addEventListener('click', function () {
+          triggerDownload('/api/admin/export/rsvp.csv');
+        });
+        document.getElementById('export-songs').addEventListener('click', function () {
+          triggerDownload('/api/admin/export/songs.csv');
+        });
+        document.getElementById('reset-data').addEventListener('click', resetData);
+
+        if (new URLSearchParams(window.location.search).get('reset') === '1') {
+          resetData();
+        }
+
+        loadSummary();
+      })();
+    </script>
+  </body>
+</html>

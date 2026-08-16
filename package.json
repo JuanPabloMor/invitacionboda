@@ -1,0 +1,19 @@
+{
+  "name": "invitacionesboda",
+  "version": "1.0.0",
+  "description": "Crear una landing page elegante, emotiva y clara para la boda de Juan Pablo y Sandra. La web debe transmitir una estética editorial, sobria y cuidada, inspirada en una invitación premium de una sola página.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "googleapis": "^174.0.1"
+  }
+}
