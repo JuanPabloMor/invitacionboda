@@ -292,6 +292,36 @@ Este proyecto ya incluye configuración para desplegar como servicio web en Rend
 - Healthcheck: `GET /healthz`
 - URL principal: `/`
 - Panel admin: `/admin`
+
+## 10. Despliegue en la nube (Vercel gratuito)
+
+El proyecto ya está preparado para Vercel con:
+
+- [api/index.js](api/index.js) como handler serverless
+- [vercel.json](vercel.json) con rutas a Express
+
+### 10.1 Pasos
+
+1. En Vercel pulsa Add New y luego Project.
+2. Importa el repo `JuanPabloMor/invitacionboda`.
+3. Framework: Other.
+4. Deploy.
+
+### 10.2 Variables de entorno en Vercel
+
+Define estas variables en el proyecto:
+
+- `ADMIN_TOKEN`
+- `GOOGLE_SHEETS_ID`
+- `GOOGLE_SERVICE_ACCOUNT_EMAIL`
+- `GOOGLE_PRIVATE_KEY`
+- `DATA_DIR=/tmp/invitacionesboda-data`
+- `SHEETS_REQUIRED=true`
+
+### 10.3 Nota importante
+
+- En Vercel el almacenamiento local es efímero.
+- Con `SHEETS_REQUIRED=true`, la API solo considera éxito cuando guarda en Google Sheets.
 - almacenamiento en `data/rsvp.json` y `data/songs.json`
 - panel de administración en `/admin`
 - exportación CSV en:

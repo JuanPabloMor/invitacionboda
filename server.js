@@ -561,7 +561,11 @@ app.get('/healthz', (_req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor de la boda escuchando en http://localhost:${PORT}`);
-  console.log(`Directorio de datos: ${DATA_DIR}`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Servidor de la boda escuchando en http://localhost:${PORT}`);
+    console.log(`Directorio de datos: ${DATA_DIR}`);
+  });
+}
+
+module.exports = app;
