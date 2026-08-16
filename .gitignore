@@ -2,3 +2,5 @@ node_modules/
 .env
 data/
 _tmp_mockup_check.js
+.vercel
+.env*

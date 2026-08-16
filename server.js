@@ -32,7 +32,13 @@ function initializeDataStorage() {
       if (!fs.existsSync(filePath)) {
         fs.writeFileSync(filePath, '[]', 'utf8');
       }
+
+      // In serverless runtimes (e.g. /var/task), files can exist but be read-only.
+      // Force a write permission check so we can fallback to /tmp safely.
+      fs.accessSync(filePath, fs.constants.W_OK);
     }
+
+    fs.accessSync(dirPath, fs.constants.W_OK);
 
     DATA_DIR = dirPath;
     RSVP_PATH = rsvpPath;
