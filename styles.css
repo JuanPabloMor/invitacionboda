@@ -39,12 +39,12 @@ p {
   margin: 0;
 }
 
-.mockup-wrap {
+.invite-shell {
   width: min(520px, 100%);
   margin: 0 auto;
 }
 
-.mockup-label {
+.page-badge {
   display: none;
 }
 
@@ -868,7 +868,7 @@ body.modal-open {
 }
 
 @media (max-width: 560px) {
-  .mockup-wrap {
+  .invite-shell {
     width: 96vw;
     margin: 20px auto 42px;
   }

@@ -571,7 +571,7 @@ app.get('/api/admin/export/songs.csv', (req, res) => {
 });
 
 app.get('/', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'mockup.html'));
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 app.get('/admin', (_req, res) => {
