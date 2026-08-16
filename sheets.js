@@ -6,8 +6,27 @@ const SHEET_ID = process.env.GOOGLE_SHEETS_ID || '';
 const SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '';
 const RAW_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY || '';
 
-// En .env la clave viene con \n literales; hay que expandirlos
-const PRIVATE_KEY = RAW_PRIVATE_KEY.replace(/\\n/g, '\n');
+function normalizePrivateKey(rawKey) {
+  if (!rawKey) return '';
+
+  let normalized = String(rawKey).trim();
+
+  if ((normalized.startsWith('"') && normalized.endsWith('"')) || (normalized.startsWith("'") && normalized.endsWith("'"))) {
+    normalized = normalized.slice(1, -1);
+  }
+
+  normalized = normalized
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n');
+
+  return normalized;
+}
+
+// En .env la clave puede venir con \n literales o con saltos de línea reales.
+const PRIVATE_KEY = normalizePrivateKey(RAW_PRIVATE_KEY);
 
 const RSVP_TAB = 'RSVP';
 const SONGS_TAB = 'Canciones';
