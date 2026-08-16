@@ -9,7 +9,9 @@ services:
       - key: NODE_ENV
         value: production
       - key: DATA_DIR
-        value: /var/data
+        value: /tmp/invitacionesboda-data
+      - key: SHEETS_REQUIRED
+        value: "true"
       - key: ADMIN_TOKEN
         sync: false
       - key: GOOGLE_SHEETS_ID
@@ -18,7 +20,3 @@ services:
         sync: false
       - key: GOOGLE_PRIVATE_KEY
         sync: false
-    disk:
-      name: invitacionesboda-data
-      mountPath: /var/data
-      sizeGB: 1

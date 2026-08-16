@@ -282,9 +282,10 @@ Este proyecto ya incluye configuración para desplegar como servicio web en Rend
 
 ### 9.3 Persistencia de datos
 
-- Se monta un disco persistente en `/var/data`.
-- La app usa `DATA_DIR=/var/data` en producción (definido en [render.yaml](render.yaml)).
-- En local sigue funcionando con `./data`.
+- En despliegue gratuito se usa almacenamiento efímero (`/tmp/invitacionesboda-data`).
+- La persistencia real debe hacerse en Google Sheets.
+- `SHEETS_REQUIRED=true` hace que la API falle si no puede escribir en Google Sheets.
+- En local puedes seguir usando `./data` para pruebas.
 
 ### 9.4 Verificación
 

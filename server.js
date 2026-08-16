@@ -9,6 +9,7 @@ const sheets = require('./sheets');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
+const SHEETS_REQUIRED = String(process.env.SHEETS_REQUIRED || '').toLowerCase() === 'true';
 const DATA_DIR = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(__dirname, 'data');
@@ -323,24 +324,49 @@ app.get('/api/rsvp', (_req, res) => {
   res.json(items);
 });
 
-app.post('/api/rsvp', (req, res) => {
+app.post('/api/rsvp', async (req, res) => {
   const validation = validateRsvp(req.body);
   if (!validation.ok) {
     return res.status(400).json({ ok: false, message: validation.message });
   }
 
-  const records = readJson(RSVP_PATH);
+  const sheetsConfigured = sheets.isConfigured();
+  if (SHEETS_REQUIRED && !sheetsConfigured) {
+    return res.status(503).json({
+      ok: false,
+      message: 'Google Sheets no está configurado en este entorno.'
+    });
+  }
+
   const entry = {
     id: crypto.randomUUID(),
     ...validation.normalized
   };
 
+  let sheetsError = null;
+  if (sheetsConfigured) {
+    try {
+      await sheets.appendRsvp(entry);
+    } catch (err) {
+      sheetsError = err;
+      if (SHEETS_REQUIRED) {
+        return res.status(502).json({
+          ok: false,
+          message: 'No se pudo guardar en Google Sheets. Inténtalo de nuevo.',
+          error: err.message || String(err)
+        });
+      }
+    }
+  }
+
+  const records = readJson(RSVP_PATH);
+
   records.push(entry);
   writeJson(RSVP_PATH, records);
 
-  sheets.appendRsvp(entry).catch((err) => {
-    console.error('[Sheets RSVP]', err.message || err);
-  });
+  if (sheetsError) {
+    console.error('[Sheets RSVP]', sheetsError.message || sheetsError);
+  }
 
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   return res.status(201).json({ ok: true, message: 'Confirmación guardada correctamente.', entry });
@@ -351,13 +377,20 @@ app.get('/api/songs', (_req, res) => {
   res.json(items);
 });
 
-app.post('/api/songs', (req, res) => {
+app.post('/api/songs', async (req, res) => {
   const validation = validateSong(req.body);
   if (!validation.ok) {
     return res.status(400).json({ ok: false, message: validation.message });
   }
 
-  const records = readJson(SONGS_PATH);
+  const sheetsConfigured = sheets.isConfigured();
+  if (SHEETS_REQUIRED && !sheetsConfigured) {
+    return res.status(503).json({
+      ok: false,
+      message: 'Google Sheets no está configurado en este entorno.'
+    });
+  }
+
   const submissionId = crypto.randomUUID();
   const entries = validation.normalized.songs.map((song, index) => ({
     id: crypto.randomUUID(),
@@ -370,14 +403,32 @@ app.post('/api/songs', (req, res) => {
     submittedAt: validation.normalized.submittedAt
   }));
 
+  let sheetsError = null;
+  if (sheetsConfigured) {
+    try {
+      for (const entry of entries) {
+        await sheets.appendSong(entry);
+      }
+    } catch (err) {
+      sheetsError = err;
+      if (SHEETS_REQUIRED) {
+        return res.status(502).json({
+          ok: false,
+          message: 'No se pudo guardar en Google Sheets. Inténtalo de nuevo.',
+          error: err.message || String(err)
+        });
+      }
+    }
+  }
+
+  const records = readJson(SONGS_PATH);
+
   records.push(...entries);
   writeJson(SONGS_PATH, records);
 
-  entries.forEach((entry) => {
-    sheets.appendSong(entry).catch((err) => {
-      console.error('[Sheets Songs]', err.message || err);
-    });
-  });
+  if (sheetsError) {
+    console.error('[Sheets Songs]', sheetsError.message || sheetsError);
+  }
 
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   return res.status(201).json({ ok: true, message: 'Petición de canción guardada correctamente.', entries });
@@ -504,7 +555,9 @@ app.get('/healthz', (_req, res) => {
   res.status(200).json({
     ok: true,
     service: 'invitacionesboda',
-    dataDir: DATA_DIR
+    dataDir: DATA_DIR,
+    sheetsRequired: SHEETS_REQUIRED,
+    sheetsConfigured: sheets.isConfigured()
   });
 });
 
