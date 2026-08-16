@@ -10,11 +10,11 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 const SHEETS_REQUIRED = String(process.env.SHEETS_REQUIRED || '').toLowerCase() === 'true';
-const DATA_DIR = process.env.DATA_DIR
+let DATA_DIR = process.env.DATA_DIR
   ? path.resolve(process.env.DATA_DIR)
   : path.join(__dirname, 'data');
-const RSVP_PATH = path.join(DATA_DIR, 'rsvp.json');
-const SONGS_PATH = path.join(DATA_DIR, 'songs.json');
+let RSVP_PATH = path.join(DATA_DIR, 'rsvp.json');
+let SONGS_PATH = path.join(DATA_DIR, 'songs.json');
 
 const MEAL_CHOICE_LABELS = {
   bacalao: 'Pescado',
@@ -22,12 +22,39 @@ const MEAL_CHOICE_LABELS = {
   'coordinar-restaurante': 'Comodín'
 };
 
-fs.mkdirSync(DATA_DIR, { recursive: true });
-for (const filePath of [RSVP_PATH, SONGS_PATH]) {
-  if (!fs.existsSync(filePath)) {
-    fs.writeFileSync(filePath, '[]', 'utf8');
+function initializeDataStorage() {
+  function tryInit(dirPath) {
+    const rsvpPath = path.join(dirPath, 'rsvp.json');
+    const songsPath = path.join(dirPath, 'songs.json');
+
+    fs.mkdirSync(dirPath, { recursive: true });
+    for (const filePath of [rsvpPath, songsPath]) {
+      if (!fs.existsSync(filePath)) {
+        fs.writeFileSync(filePath, '[]', 'utf8');
+      }
+    }
+
+    DATA_DIR = dirPath;
+    RSVP_PATH = rsvpPath;
+    SONGS_PATH = songsPath;
+    return true;
+  }
+
+  try {
+    return tryInit(DATA_DIR);
+  } catch (error) {
+    const fallbackDir = path.join('/tmp', 'invitacionesboda-data');
+    try {
+      const ok = tryInit(fallbackDir);
+      console.warn(`DATA_DIR no escribible (${DATA_DIR}). Usando fallback: ${fallbackDir}`);
+      return ok;
+    } catch (_fallbackError) {
+      throw error;
+    }
   }
 }
+
+initializeDataStorage();
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(__dirname));
